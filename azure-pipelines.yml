@@ -1,0 +1,36 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: UiPathPack@4
+  inputs:
+    versionType: 'AutoVersion'
+    projectJsonPath: '$(Build.SourcesDirectory)'
+    orchestratorConnection: 'UiPathOrchestratorConnection'
+    outputPath: '$(Build.ArtifactStagingDirectory)\Output'
+    traceLevel: 'Information'
+
+- task: DownloadSecureFile@1
+  inputs:
+    secureFile: 'NuGetTestDeveloper1.pfx'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'build'
+    projects: '$(Build.ArtifactStagingDirectory)\Output'
+    arguments: 'dotnet nuget sign $(Build.ArtifactStagingDirectory)\Output --certificate-path NuGetTestDeveloper1.pfx --certificate-password 1234'
+
+- task: UiPathDeploy@4
+  inputs:
+    orchestratorConnection: 'UiPathOrchestratorConnection'
+    packagesPath: '$(Build.ArtifactStagingDirectory)\Output'
+    folderName: 'AzureDevOpsFolder'
+    traceLevel: 'Information'
